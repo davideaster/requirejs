@@ -264,12 +264,14 @@ var requirejs, require, define;
          * only be done if this normalization is for a dependency ID.
          * @returns {String} normalized name
          */
-        function normalize(name, baseName, applyMap) {
+        function normalize(name, baseName, applyMap, isPrefix) {
             var pkgMain, mapValue, nameParts, i, j, nameSegment, lastIndex,
-                foundMap, foundI, foundStarMap, starI, normalizedBaseParts,
+                foundMap, foundI, foundStarMap, starI, foundBangMap, bangI,
+                normalizedBaseParts,
                 baseParts = (baseName && baseName.split('/')),
                 map = config.map,
-                starMap = map && map['*'];
+                starMap = map && map['*'],
+                bangMap = map && map['!'];
 
             //Adjust any relative paths.
             if (name) {
@@ -300,7 +302,7 @@ var requirejs, require, define;
             }
 
             //Apply map config if available.
-            if (applyMap && map && (baseParts || starMap)) {
+            if (applyMap && map && (baseParts || starMap || (isPrefix && bangMap))) {
                 nameParts = name.split('/');
 
                 outerLoop: for (i = nameParts.length; i > 0; i -= 1) {
@@ -333,11 +335,21 @@ var requirejs, require, define;
                         foundStarMap = getOwn(starMap, nameSegment);
                         starI = i;
                     }
+
+                    if (isPrefix && !foundBangMap && bangMap && getOwn(bangMap, nameSegment)) {
+                        foundBangMap = getOwn(bangMap, nameSegment);
+                        bangI = i;
+                    }
                 }
 
                 if (!foundMap && foundStarMap) {
                     foundMap = foundStarMap;
                     foundI = starI;
+                }
+
+                if (!foundMap && foundBangMap) {
+                    foundMap = foundBangMap;
+                    foundI = bangI;
                 }
 
                 if (foundMap) {
@@ -431,7 +443,7 @@ var requirejs, require, define;
             name = nameParts[1];
 
             if (prefix) {
-                prefix = normalize(prefix, parentName, applyMap);
+                prefix = normalize(prefix, parentName, applyMap, true);
                 pluginModule = getOwn(defined, prefix);
             }
 
